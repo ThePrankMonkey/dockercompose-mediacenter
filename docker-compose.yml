@@ -1,95 +1,170 @@
 ---
 version: "2.1"
 services:
+  heimdall:
+    # https://hub.docker.com/r/linuxserver/heimdall/
+    image: ghcr.io/linuxserver/heimdall:latest
+    container_name: heimdall
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TIME_ZONE}
+    volumes:
+      - ${PATH_CONFIG}/heimdall:/config
+    ports:
+      - 80:80
+      - 443:443
+    restart: unless-stopped
   plex:
-    image: ghcr.io/linuxserver/plex
+    image: ghcr.io/linuxserver/plex:latest
     container_name: plex
     network_mode: host
     environment:
-      - PUID=1000
-      - PGID=1000
+      - PUID=${PUID}
+      - PGID=${PGID}
       - VERSION=docker
       - UMASK_SET=022 #optional
       - PLEX_CLAIM= #optional
     volumes:
-      - /vms/docker-configs/plex:/config
-      - /storage/plex/tv:/tv
-      - /storage/plex/movies:/movies
-    ports:
-      - 32400:32400
+      - ${PATH_CONFIG}/plex:/config
+      - ${PATH_TV}:/tv
+      - ${PATH_MOVIE}:/movies
+      - ${PATH_RIFF}:/rifftrax
+      - ${PATH_MUSIC}:/music
+      - ${PATH_CARTOON}:/cartoons
+      - ${PATH_ANIME}:/anime
+      - ${PATH_AUDIOBOOK}:/audiobooks
     restart: unless-stopped
   sonarr:
-    image: ghcr.io/linuxserver/sonarr
+    image: ghcr.io/linuxserver/sonarr:latest
     container_name: sonarr
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TIME_ZONE}
       - UMASK_SET=022 #optional
     volumes:
-      - /vms/docker-configs/plsonarrex:/config
-      - /storage/plex/tv:/tv
-      - /storage/sabnzbd/downloads:/downloads
+      - ${PATH_CONFIG}/sonarr:/config
+      - ${PATH_TV}:/tv
+      - ${PATH_CARTOON}:/cartoons
+      - ${PATH_ANIME}:/anime
+      - ${PATH_DOWNLOADS}:/downloads
+      - ${PATH_JDOWN}:/jdown
     ports:
       - 8989:8989
     restart: unless-stopped
   radarr:
-    image: ghcr.io/linuxserver/radarr
+    image: ghcr.io/linuxserver/radarr:latest
     container_name: radarr
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TIME_ZONE}
       - UMASK_SET=022 #optional
     volumes:
-      - /vms/docker-configs/radarr:/config
-      - /storage/plex/movies:/movies
-      - /storage/sabnzbd/downloads:/downloads
+      - ${PATH_CONFIG}/radarr:/config
+      - ${PATH_MOVIE}:/movies
+      - ${PATH_DOWNLOADS}:/downloads
+      - ${PATH_JDOWN}:/jdown
     ports:
       - 7878:7878
     restart: unless-stopped
   lidarr:
-    image: ghcr.io/linuxserver/lidarr
+    image: ghcr.io/linuxserver/lidarr:latest
     container_name: lidarr
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TIME_ZONE}
       - UMASK_SET=022 #optional
     volumes:
-      - /vms/docker-configs/lidarr:/config
-      - /storage/plex/music:/music
-      - /storage/sabnzbd/downloads:/downloads
+      - ${PATH_CONFIG}/lidarr:/config
+      - ${PATH_MUSIC}:/music
+      - ${PATH_DOWNLOADS}:/downloads
+      - ${PATH_JDOWN}:/jdown
     ports:
       - 8686:8686
     restart: unless-stopped
   sabnzbd:
-    image: ghcr.io/linuxserver/sabnzbd
+    image: ghcr.io/linuxserver/sabnzbd:latest
     container_name: sabnzbd
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TIME_ZONE}
     volumes:
-      - /vms/docker-configs/sabnzbd:/config
-      - /storage/sabnzbd/downloads:/downloads
-      - /storage/sabnzbd/incomplete:/incomplete-downloads #optional
+      - ${PATH_CONFIG}/sabnzbd:/config
+      - ${PATH_DOWNLOADS}:/downloads
+      - ${PATH_INCOMPLETE}:/incomplete-downloads #optional
     ports:
       - 8080:8080
-      - 9090:9090
+      # - 9090:9090
     restart: unless-stopped
   lazylibrarian:
-    image: ghcr.io/linuxserver/lazylibrarian
+    image: ghcr.io/linuxserver/lazylibrarian:latest
     container_name: lazylibrarian
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TIME_ZONE}
       - DOCKER_MODS=linuxserver/calibre-web:calibre|linuxserver/mods:lazylibrarian-ffmpeg #optional
     volumes:
-      - /vms/docker-configs/lazylibrarian:/config
-      - /storage/sabnzbd/downloads:/downloads
-      - /storage/books:/books
+      - ${PATH_CONFIG}/lazylibrarian:/config
+      - ${PATH_DOWNLOADS}:/downloads
+      - ${PATH_BOOK}:/books
+      - ${PATH_AUDIOBOOK}:/audiobooks
+      - ${PATH_LAZY}:/uploads
     ports:
       - 5299:5299
     restart: unless-stopped
+  jdownloader:
+    image: jaymoulin/jdownloader:latest
+    container_name: jdownloader
+    restart: always
+    user: ${PUID}:${PGID}
+    volumes:
+        - ${PATH_CONFIG}/jdownloader:/opt/JDownloader/cfg
+        - ${PATH_JDOWN}:/opt/JDownloader/Downloads
+        # - </path/to/appdata/logs>:/opt/JDownloader/logs #optional
+        # - /etc/localtime:/etc/localtime:ro #optional
+    environment: 
+            # MYJD_USER: email@email.com #optional (see [Identify](https://github.com/jaymoulin/docker-jdownloader#identify))
+            # MYJD_PASSWORD: bar #optional (see [Identify](https://github.com/jaymoulin/docker-jdownloader#identify))
+            MYJD_DEVICE_NAME: jdown_docker
+            XDG_DOWNLOAD_DIR: /opt/JDownloader/Downloads
+    ports:
+        - 3129:3129
+  calibre-web:
+    image: ghcr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TIME_ZONE}
+      - DOCKER_MODS=linuxserver/calibre-web:calibre
+    volumes:
+      - ${PATH_CONFIG}/calibre:/config
+      - ${PATH_BOOK}:/books
+    ports:
+      - 8083:8083
+    restart: unless-stopped
+  booksonic:
+    image: ghcr.io/linuxserver/booksonic:latest
+    container_name: booksonic
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TIME_ZONE}
+      # - CONTEXT_PATH=url-base
+    volumes:
+      - ${PATH_CONFIG}/booksonic:/config
+      - ${PATH_AUDIOBOOK}:/audiobooks
+    ports:
+      - 4040:4040
+    restart: unless-stopped
+  # watchtower:
+  #   image: containrrr/watchtower:latest
+  #   container_name: watchtower
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   restart: unless-stopped
