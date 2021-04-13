@@ -18,12 +18,12 @@ services:
   plex:
     image: ghcr.io/linuxserver/plex:latest
     container_name: plex
-    network_mode: host
+    # network_mode: host
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - VERSION=docker
-      - UMASK_SET=022 #optional
+      - UMASK=022 #optional
       - PLEX_CLAIM= #optional
     volumes:
       - ${PATH_CONFIG}/plex:/config
@@ -34,6 +34,8 @@ services:
       - ${PATH_CARTOON}:/cartoons
       - ${PATH_ANIME}:/anime
       - ${PATH_AUDIOBOOK}:/audiobooks
+    ports:
+      - 32400:32400
     restart: unless-stopped
   sonarr:
     image: ghcr.io/linuxserver/sonarr:latest
@@ -149,7 +151,7 @@ services:
       - 8083:8083
     restart: unless-stopped
   booksonic:
-    image: ghcr.io/linuxserver/booksonic:latest
+    image: ghcr.io/linuxserver/booksonic-air:latest
     container_name: booksonic
     environment:
       - PUID=${PUID}
