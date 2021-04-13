@@ -13,6 +13,8 @@ docker image prune --force
 Need a user and group named `docker`, and to update the .env with the PUID and PGID.
 Need a config and storage folder structure.
 
+Get the PUID and PGID with `id docker` and then update `.env` variables.
+
 ## Maintain
 
 Make a cron job that executes the build script.
