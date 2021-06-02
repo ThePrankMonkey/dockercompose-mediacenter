@@ -15,6 +15,8 @@ Need a config and storage folder structure.
 
 Get the PUID and PGID with `id docker` and then update `.env` variables.
 
+### Container Settings
+
 ## Maintain
 
 Make a cron job that executes the build script.
