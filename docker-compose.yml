@@ -28,6 +28,7 @@ services:
     volumes:
       - ${PATH_CONFIG}/plex:/config
       - ${PATH_TV}:/tv
+      - ${PATH_TUTORIAL}:/tutorial
       - ${PATH_MOVIE}:/movies
       - ${PATH_RIFF}:/rifftrax
       - ${PATH_MUSIC}:/music
@@ -134,27 +135,28 @@ services:
     restart: always
     user: ${PUID}:${PGID}
     volumes:
-        - ${PATH_CONFIG}/jdownloader:/opt/JDownloader/cfg
-        - ${PATH_JDOWN}:/opt/JDownloader/Downloads
-        # - </path/to/appdata/logs>:/opt/JDownloader/logs #optional
-        # - /etc/localtime:/etc/localtime:ro #optional
-    environment: 
-            # MYJD_USER: email@email.com #optional (see [Identify](https://github.com/jaymoulin/docker-jdownloader#identify))
-            # MYJD_PASSWORD: bar #optional (see [Identify](https://github.com/jaymoulin/docker-jdownloader#identify))
-            MYJD_DEVICE_NAME: jdown_docker
-            XDG_DOWNLOAD_DIR: /opt/JDownloader/Downloads
+      - ${PATH_CONFIG}/jdownloader:/opt/JDownloader/cfg
+      - ${PATH_JDOWN}:/opt/JDownloader/Downloads
+      # - </path/to/appdata/logs>:/opt/JDownloader/logs #optional
+      # - /etc/localtime:/etc/localtime:ro #optional
+    environment:
+      # MYJD_USER: email@email.com #optional (see [Identify](https://github.com/jaymoulin/docker-jdownloader#identify))
+      # MYJD_PASSWORD: bar #optional (see [Identify](https://github.com/jaymoulin/docker-jdownloader#identify))
+      MYJD_DEVICE_NAME: jdown_docker
+      XDG_DOWNLOAD_DIR: /opt/JDownloader/Downloads
     ports:
-        - 3129:3129
+      - 3129:3129
   calibre-web:
-    image: ghcr.io/linuxserver/calibre-web:latest
+    image: lscr.io/linuxserver/calibre-web:latest
     container_name: calibre-web
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TIME_ZONE}
-      - DOCKER_MODS=linuxserver/calibre-web:calibre
+      - DOCKER_MODS=linuxserver/mods:universal-calibre
+      - OAUTHLIB_RELAX_TOKEN_SCOPE=1 #optional, Related to Google Drive
     volumes:
-      - ${PATH_CONFIG}/calibre:/config
+      - ${PATH_CONFIG}/calibre-web:/config
       - ${PATH_BOOK}:/books
     ports:
       - 8083:8083
