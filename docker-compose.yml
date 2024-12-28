@@ -1,5 +1,13 @@
 ---
-version: "2.1"
+version: "3.9"
+
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "5m"
+    max-file: "2"
+
 services:
   heimdall:
     # https://hub.docker.com/r/linuxserver/heimdall/
@@ -12,9 +20,14 @@ services:
     volumes:
       - ${PATH_CONFIG}/heimdall:/config
     ports:
-      - 80:80
-      - 443:443
+      - 8088:80
+      - 8443:443
+    logging: *default-logging
     restart: unless-stopped
+    networks:
+      - proxynet
+    labels:
+      - "traefik.http.routers.heimdall.rule=Host(`heimdall.docker.localhost`)"
   plex:
     image: ghcr.io/linuxserver/plex:latest
     container_name: plex
@@ -35,6 +48,8 @@ services:
       - ${PATH_CARTOON}:/cartoons
       - ${PATH_ANIME}:/anime
       - ${PATH_AUDIOBOOK}:/audiobooks
+      - ${PATH_LANGUAGE}:/language
+      - ${PATH_YOUTUBE}:/youtube
     ports:
       - 32400:32400
       - 1900:1900/udp
@@ -46,7 +61,10 @@ services:
       - 32413:32413/udp
       - 32414:32414/udp
       - 32469:32469
+    logging: *default-logging
     restart: unless-stopped
+    networks:
+      - proxynet
   sonarr:
     image: ghcr.io/linuxserver/sonarr:latest
     container_name: sonarr
@@ -64,7 +82,10 @@ services:
       - ${PATH_JDOWN}:/jdown
     ports:
       - 8989:8989
+    logging: *default-logging
     restart: unless-stopped
+    networks:
+      - proxynet
   radarr:
     image: ghcr.io/linuxserver/radarr:latest
     container_name: radarr
@@ -80,7 +101,10 @@ services:
       - ${PATH_JDOWN}:/jdown
     ports:
       - 7878:7878
+    logging: *default-logging
     restart: unless-stopped
+    networks:
+      - proxynet
   lidarr:
     image: ghcr.io/linuxserver/lidarr:latest
     container_name: lidarr
@@ -96,7 +120,10 @@ services:
       - ${PATH_JDOWN}:/jdown
     ports:
       - 8686:8686
+    logging: *default-logging
     restart: unless-stopped
+    networks:
+      - proxynet
   sabnzbd:
     image: ghcr.io/linuxserver/sabnzbd:latest
     container_name: sabnzbd
@@ -111,31 +138,38 @@ services:
     ports:
       - 8080:8080
       # - 9090:9090
+    logging: *default-logging
     restart: unless-stopped
-  lazylibrarian:
-    image: ghcr.io/linuxserver/lazylibrarian:latest
-    container_name: lazylibrarian
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TIME_ZONE}
-      - DOCKER_MODS=linuxserver/calibre-web:calibre|linuxserver/mods:lazylibrarian-ffmpeg #optional
-    volumes:
-      - ${PATH_CONFIG}/lazylibrarian:/config
-      - ${PATH_DOWNLOADS}:/downloads
-      - ${PATH_BOOK}:/books
-      - ${PATH_AUDIOBOOK}:/audiobooks
-      - ${PATH_LAZY}:/uploads
-    ports:
-      - 5299:5299
-    restart: unless-stopped
+    networks:
+      - proxynet
+  # lazylibrarian:
+  #   image: ghcr.io/linuxserver/lazylibrarian:latest
+  #   container_name: lazylibrarian
+  #   environment:
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
+  #     - TZ=${TIME_ZONE}
+  #     - DOCKER_MODS=linuxserver/calibre-web:calibre|linuxserver/mods:lazylibrarian-ffmpeg #optional
+  #   volumes:
+  #     - ${PATH_CONFIG}/lazylibrarian:/config
+  #     - ${PATH_DOWNLOADS}:/downloads
+  #     - ${PATH_BOOK}:/books
+  #     - ${PATH_AUDIOBOOK}:/audiobooks
+  #     - ${PATH_LAZY}:/uploads
+  #   ports:
+  #     - 5299:5299
+  #   logging: *default-logging
+  #   restart: unless-stopped
+  #   networks:
+  #   - proxynet
   jdownloader:
     image: jaymoulin/jdownloader:latest
     container_name: jdownloader
-    restart: always
+    # entrypoint: ["tail", "-f", "/dev/null"]
     user: ${PUID}:${PGID}
     volumes:
       - ${PATH_CONFIG}/jdownloader:/opt/JDownloader/cfg
+      # - ${PATH_CONFIG}/jdownloader:/opt/JDownloader/app/cfg # But this breaks things
       - ${PATH_JDOWN}:/opt/JDownloader/Downloads
       # - </path/to/appdata/logs>:/opt/JDownloader/logs #optional
       # - /etc/localtime:/etc/localtime:ro #optional
@@ -146,6 +180,10 @@ services:
       XDG_DOWNLOAD_DIR: /opt/JDownloader/Downloads
     ports:
       - 3129:3129
+    logging: *default-logging
+    restart: unless-stopped
+    networks:
+      - proxynet
   calibre-web:
     image: lscr.io/linuxserver/calibre-web:latest
     container_name: calibre-web
@@ -158,26 +196,128 @@ services:
     volumes:
       - ${PATH_CONFIG}/calibre-web:/config
       - ${PATH_BOOK}:/books
+      - ${PATH_BOOK_IMPORT}:/import
     ports:
       - 8083:8083
+    logging: *default-logging
     restart: unless-stopped
-  booksonic:
-    image: ghcr.io/linuxserver/booksonic-air:latest
-    container_name: booksonic
+    networks:
+      - proxynet
+  # booksonic:
+  #   image: ghcr.io/linuxserver/booksonic-air:latest
+  #   container_name: booksonic
+  #   environment:
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
+  #     - TZ=${TIME_ZONE}
+  #     # - CONTEXT_PATH=url-base
+  #   volumes:
+  #     - ${PATH_CONFIG}/booksonic:/config
+  #     - ${PATH_AUDIOBOOK}:/audiobooks
+  #   ports:
+  #     - 4040:4040
+  #   restart: unless-stopped
+  #   networks:
+  #   - proxynet
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    environment:
+      - AUDIOBOOKSHELF_UID=${PUID}
+      - AUDIOBOOKSHELF_GID=${PGID}
+    ports:
+      - 13378:80
+    volumes:
+      - ${PATH_AUDIOBOOK}:/audiobooks
+      - ${PATH_BOOK}:/books
+      - ${PATH_LANGUAGE}:/language
+      # - </path/to/podcasts>:/podcasts
+      - ${PATH_CONFIG}/audiobookshelf:/config
+      - ${PATH_CONFIG}/audiobookshelf_meta:/metadata
+    logging: *default-logging
+    restart: unless-stopped
+    networks:
+      - proxynet
+  # stremio:
+  #   image: sleeyax/stremio-streaming-server:latest
+  #   environment:
+  #     - FIX_UNSUPPORTED_MEDIA=1
+  #   ports:
+  #     - 11470:11470
+  #   volumes:
+  #     - ${PATH_CONFIG}/stremio:/root/.stremio-server
+  #   logging: *default-logging
+  #   restart: unless-stopped
+  #   networks:
+  #   - proxynet
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TIME_ZONE}
-      # - CONTEXT_PATH=url-base
+      # - JELLYFIN_PublishedServerUrl=192.168.0.5 #optional
     volumes:
-      - ${PATH_CONFIG}/booksonic:/config
-      - ${PATH_AUDIOBOOK}:/audiobooks
+      - ${PATH_CONFIG}/jellyfin:/config
+      - ${PATH_TV}:/data/tv
+      - ${PATH_TUTORIAL}:/data/tutorial
+      - ${PATH_MOVIE}:/data/movies
+      - ${PATH_RIFF}:/data/rifftrax
+      - ${PATH_MUSIC}:/data/music
+      - ${PATH_CARTOON}:/data/cartoons
+      - ${PATH_ANIME}:/data/anime
+      - ${PATH_AUDIOBOOK}:/data/audiobooks
+      - ${PATH_YOUTUBE}:/data/youtube
     ports:
-      - 4040:4040
+      - 8096:8096
+      - 8920:8920 #optional
+      - 7359:7359/udp #optional
+      - 1901:1900/udp #optional
+    logging: *default-logging
     restart: unless-stopped
-  # watchtower:
-  #   image: containrrr/watchtower:latest
-  #   container_name: watchtower
+    networks:
+    - proxynet
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TIME_ZONE}
+    volumes:
+      - ${PATH_CONFIG}/bazarr:/config
+      - ${PATH_TV}:/data/tv
+      - ${PATH_MOVIE}:/data/movies
+      - ${PATH_CARTOON}:/data/cartoons
+      - ${PATH_ANIME}:/data/anime
+    ports:
+      - 6767:6767
+    logging: *default-logging
+    restart: unless-stopped
+    networks:
+      - proxynet
+  # tubesync:
+  #   image: ghcr.io/meeb/tubesync:latest
+  #   container_name: tubesync
+  #   environment:
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
+  #     - TZ=${TIME_ZONE}
   #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - ${PATH_CONFIG}/tubesync:/config
+  #     - ${PATH_YOUTUBE}:/downloads
+  #   ports:
+  #     - 4848:4848
+  #   logging: *default-logging
   #   restart: unless-stopped
+  #   networks:
+  #   - proxynet
+
+networks:
+  default:
+    name: homelab-network
+    external: true
+  proxynet:
+    name: proxynet
+    external: true
